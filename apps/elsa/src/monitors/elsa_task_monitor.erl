@@ -24,7 +24,6 @@ timeout(Method, Service, Endpoint, Body, Timeout) ->
 request(Monitor, Method, Service, Body, Endpoint) ->
   Instance = wait_for_instance(Service),
   URL = validate(concat(Instance, Endpoint)),
-  _Header = [],
   Type = "application/json",
   DATA = request(Method, URL, Body, Type),
   receive
@@ -35,13 +34,13 @@ request(Monitor, Method, Service, Body, Endpoint) ->
   end.
 
 request(Method, URL, Body, Type) ->
-  {ok, {{_, _, _},_, DATA}} = case Method of
+  {ok, {{_, _, _}, HEADERS, DATA}} = case Method of
     get ->
       httpc:request(Method, {URL, []}, [], []);
     _ ->
       httpc:request(Method, {URL, [], Type, Body}, [], [])
   end,
-  list_to_binary(DATA).
+  {elsa_handler:headers_to_binary_headers(HEADERS), list_to_binary(DATA)}.
 
 wait_for_instance(Service) ->
   case elsa_registry:checkout(Service) of

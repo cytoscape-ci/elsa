@@ -8,7 +8,7 @@
          ]).
 
 status(ID) ->
-  lager:info("Checking status of task: ~p", [ID]),
+  lager:info("Checking status of task: ~w", [ID]),
   case elsa_task_worker:find(ID) of
     undefined ->
       not_found;

@@ -31,4 +31,5 @@ validate(Req, ID, not_found) ->
   {ok, elsa_handler:reply(404, <<"Task not found.">>, Req), ID}.
 
 send(Req, ID) ->
-  {ok, elsa_handler:reply(200, elsa_task:data(ID), Req), ID}.
+  {Headers, Response} = elsa_task:data(ID),
+  {ok, elsa_handler:reply(200, Headers, Response, Req), ID}.

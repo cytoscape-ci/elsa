@@ -19,7 +19,7 @@ start_link() ->
 start_child(Service) ->
   case supervisor:start_child(?SUPERVISOR, [Service]) of
     {ok, Pid} ->
-      lager:info("Service started: ~p", [Service]),
+      lager:info("Service started: ~s", [Service]),
       {ok, Pid};
     {error, {already_started, Pid}} -> {ok, Pid}
   end.

@@ -2,16 +2,22 @@
 -module(elsa_handler).
 
 -export([reply/3,
+         reply/4,
          from_json/1,
          to_json/1,
          has_body/1,
          check_json/1,
+         headers_to_binary_headers/1,
          schema/1
          ]).
 
 reply(Code, Body, Req) ->
  {ok, Reply} = cowboy_req:reply(Code, [], to_json(Body), Req),
  Reply.
+
+ reply(Code, Headers, Body, Req) ->
+   {ok, Reply} = cowboy_req:reply(Code, [], Body, Req),
+   Reply.
 
 from_json(Request) ->
   {ok, JSON, Req} = cowboy_req:body(Request),
@@ -32,6 +38,9 @@ to_json(Response) ->
 
 has_body(_Req) ->
   true.
+
+headers_to_binary_headers(Headers) ->
+  [{list_to_binary(K), list_to_binary(V)} || {K,V} <- Headers].
 
 %% HERE IS WHERE WE CAN ADD SCHEMA VALIDATION.
 schema(_Req) ->

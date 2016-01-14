@@ -7,7 +7,7 @@
          ]).
 
 init({tcp, http}, Req, _Opts) ->
-  lager:info("Service request received: ~p", [Req]),
+  lager:info("Service request received: ~w", [Req]),
   {ok, Req, undefined}.
 
 handle(Req, State) ->
@@ -17,8 +17,8 @@ handle(Req, State) ->
   {Timeout, Req4} = cowboy_req:header(<<"x-elsa-timeout">>, Req3, <<"5000">>),
   {Method, Req5} = cowboy_req:method(Req4),
   {Body, Request} = body(Req5),
-  {Status, Response} = elsa_task_monitor:start(convert(Method), Name, Version, truncate(Version, Name, Endpoint), Body, binary_to_integer(Timeout)),
-  {ok, elsa_handler:reply(Status, Response, Request), State}.
+  {Status, {Headers, Response}} = elsa_task_monitor:start(convert(Method), Name, Version, truncate(Version, Name, Endpoint), Body, binary_to_integer(Timeout)),
+  {ok, elsa_handler:reply(Status, Headers, Response, Request), State}.
 
 terminate(_Reason, _Req, _State) ->
   ok.

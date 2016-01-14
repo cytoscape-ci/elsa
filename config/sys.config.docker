@@ -2,7 +2,7 @@
   {'elsa', []},
   {mnesia, [{dir, "/elsa/DATABASE"}]},
   {lager, [
-    {error_logger_hwm, 100},
+    {error_logger_hwm, 1000},
     {handlers, [
       {lager_console_backend, info}
     ]}

@@ -46,7 +46,7 @@ unregister_instances(Service, Instances) ->
   [elsa_service_worker:unregister(Service, I#instance.location) || I <- Instances].
 
 checkout(Service) ->
-  lager:info("Checking out instance of service: ~w", [Service]),
+  lager:info("Checking out instance of service: ~s", [Service]),
   case elsa_service_worker:find(Service) of
     undefined ->
       elsa_service_worker_sup:start_child(Service),
@@ -56,7 +56,7 @@ checkout(Service) ->
     end.
 
 checkin(Service, Instance) ->
-  lager:info("Checking in instance of service: ~w", [Service]),
+  lager:info("Checking in instance of service: ~s", [Service]),
   case elsa_service_worker:find(Service) of
     undefined ->
       elsa_service_worker_sup:start_child(Service),
