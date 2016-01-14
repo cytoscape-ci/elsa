@@ -1,7 +1,8 @@
 
 -module(elsa_handler).
 
--export([reply/3,
+-export([error/3,
+         message/3,
          reply/4,
          from_json/1,
          check_content_type/1,
@@ -12,9 +13,26 @@
          schema/1
          ]).
 
-reply(Code, Body, Req) ->
- {ok, Reply} = cowboy_req:reply(Code, [], to_json(Body), Req),
- Reply.
+error(Code, Message, Req) ->
+  R = [
+  {<<"status">>, Code},
+  {<<"reason">>, Message}
+  ],
+ json_reply(Code, R, Req).
+
+ message(Code, Message, Req) ->
+   R = [
+   {<<"status">>, Code},
+   {<<"message">>, Message}
+   ],
+  json_reply(Code, R, Req).
+
+ json_reply(Code, Response, Req) ->
+   {ok, Reply} = cowboy_req:reply(Code,
+    [{<<"content-type">>, <<"application/json">>}],
+    to_json(Response),
+    Req),
+   Reply.
 
  reply(Code, Headers, Body, Req) ->
    {ok, Reply} = cowboy_req:reply(Code, [], Body, Req),

@@ -18,7 +18,13 @@ timeout(Method, Service, Endpoint, Body, Timeout) ->
   after Timeout ->
     elsa_task_worker_sup:start_child(self()),
     Conn ! {timeout, self()},
-    {300, concat(<<"http://localhost:8080/task/">>, elsa_task:get_id(self()))}
+    {300, {
+      [{<<"content-type">>, <<"application/json">>}],
+      elsa_handler:to_json([
+        {<<"status">>, 300},
+        {<<"task_id">>, elsa_task:get_id(self())}
+      ])
+    }}
   end.
 
 request(Monitor, Method, Service, Body, Endpoint) ->

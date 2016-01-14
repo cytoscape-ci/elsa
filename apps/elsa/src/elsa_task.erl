@@ -8,7 +8,7 @@
          ]).
 
 status(ID) ->
-  lager:info("Checking status of task: ~w", [ID]),
+  lager:info("Checking status of task: ~s", [ID]),
   case elsa_task_worker:find(ID) of
     undefined ->
       not_found;
@@ -22,11 +22,11 @@ check_data(_Data) ->
   complete.
 
 store_data(ID, Data) ->
-  lager:info("Storing data for task: ~w", [ID]),
+  lager:info("Storing data for task: ~s", [ID]),
   elsa_task_worker:store_data(ID, Data).
 
 data(ID) ->
-  lager:info("Retreiving data for task: ~w", [ID]),
+  lager:info("Retreiving data for task: ~s", [ID]),
   elsa_task_worker:get_data(ID).
 
 get_id(Task) when is_pid(Task) ->

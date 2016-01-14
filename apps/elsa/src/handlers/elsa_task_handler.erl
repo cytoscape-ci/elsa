@@ -21,14 +21,14 @@ process(Req, ID) ->
   validate(Req, ID, elsa_task:status(ID)).
 
 validate(Req, ID, complete) ->
-  lager:info("Client requested completed task: ~p", [ID]),
+  lager:info("Client requested completed task: ~s", [ID]),
   send(Req, ID);
 validate(Req, ID, incomplete) ->
-  lager:info("Client requested task that is not yet complete: ~p", [ID]),
-  {ok, elsa_handler:reply(204, <<"Task not yet completed. Please try again later.">>, Req), ID};
+  lager:info("Client requested task that is not yet complete: ~s", [ID]),
+  {ok, elsa_handler:error(204, <<"Task not yet completed. Please try again later.">>, Req), ID};
 validate(Req, ID, not_found) ->
-  lager:error("Client requested task that does not exist: ~p", [ID]),
-  {ok, elsa_handler:reply(404, <<"Task not found.">>, Req), ID}.
+  lager:error("Client requested task that does not exist: ~s", [ID]),
+  {ok, elsa_handler:error(404, <<"Task not found.">>, Req), ID}.
 
 send(Req, ID) ->
   {Headers, Response} = elsa_task:data(ID),
