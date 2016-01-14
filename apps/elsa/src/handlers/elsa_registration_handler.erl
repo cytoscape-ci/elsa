@@ -19,7 +19,13 @@ terminate(_Reason, _Req, _State) ->
 %% Validate and Process the Update.
 
 process(Req, State) ->
-  validate(Req, State, elsa_handler:has_body(Req)).
+  validate(Req, State, elsa_handler:check_content_type(Req)).
+
+validate(Req, State, valid_content_type) ->
+  validate(Req, State, elsa_handler:has_body(Req));
+validate(Req, State, invalid_content_type) ->
+  lager:error("Client sent bad content type in request: ~p", [Req]),
+  {ok, elsa_handler:reply(400, <<"Content type must be application/json">>, Req), State};
 
 validate(Req, State, true) ->
   validate(Req, State, elsa_handler:check_json(Req));

@@ -4,6 +4,7 @@
 -export([reply/3,
          reply/4,
          from_json/1,
+         check_content_type/1,
          to_json/1,
          has_body/1,
          check_json/1,
@@ -25,6 +26,13 @@ from_json(Request) ->
     catch error:badarg -> invalid_json
   end,
   {Req, Body}.
+
+check_content_type(Request) ->
+  {Header, _} = cowboy_req:header(<<"content-type">>, Request),
+  case Header of
+    <<"application/json">> -> valid_content_type;
+    _ -> invalid_content_type
+  end.
 
 check_json(Request) ->
   {_Req, Body} = from_json(Request),
