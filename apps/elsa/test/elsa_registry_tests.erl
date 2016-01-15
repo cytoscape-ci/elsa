@@ -25,40 +25,40 @@ cleanup(Worker)->
 
 test_register_single_instance(_Setup) ->
   elsa_registry:register(single_service_single_instance_mock()),
-  Instance = elsa_registry:checkout(<<"v1test">>),
+  Instance = elsa_registry:checkout(<<"registry_test">>, <<"v1">>),
   [?_assertEqual(<<"1.1.1.1">>, Instance)].
 
 test_unregister_single_instance(_Setup) ->
   elsa_registry:unregister(single_service_single_instance_mock()),
-  Instance = elsa_registry:checkout(<<"v1test">>),
+  Instance = elsa_registry:checkout(<<"registry_test">>, <<"v1">>),
   [?_assertEqual(unavailable, Instance)].
 
 test_register_multiple_instances(_Setup) ->
   elsa_registry:register(single_service_multiple_instance_mock()),
-  elsa_registry:checkout(<<"v2test">>),
-  Instance = elsa_registry:checkout(<<"v2test">>),
+  elsa_registry:checkout(<<"registry_test">>, <<"v2">>),
+  Instance = elsa_registry:checkout(<<"registry_test">>,<<"v2">>),
   [?_assertEqual(<<"1.1.1.2">>, Instance)].
 
 test_unregister_multiple_instances(_Setup) ->
   elsa_registry:unregister(single_service_multiple_instance_mock()),
-  elsa_registry:checkout(<<"v2test">>),
-  Instance = elsa_registry:checkout(<<"v2test">>),
+  elsa_registry:checkout(<<"registry_test">>,<<"v2">>),
+  Instance = elsa_registry:checkout(<<"registry_test">>,<<"v2">>),
   [?_assertEqual(unavailable, Instance)].
 
 test_register_multiple_services(_Setup) ->
   elsa_registry:register(multiple_service_multiple_instance_mock()),
-  V1Instance = elsa_registry:checkout(<<"v1testall">>),
-  V2Instance = elsa_registry:checkout(<<"v2testall">>),
+  V1Instance = elsa_registry:checkout(<<"registry_testall">>,<<"v1">>),
+  V2Instance = elsa_registry:checkout(<<"registry_testall">>, <<"v2">>),
   [?_assertEqual(V1Instance, V2Instance)].
 
 test_unregister_multiple_services(_Setup) ->
   elsa_registry:unregister(multiple_service_multiple_instance_mock()),
-  Instance = elsa_registry:checkout(<<"v1testall">>),
+  Instance = elsa_registry:checkout(<<"registry_testall">>,<<"v1">>),
   [?_assertEqual(unavailable, Instance)].
 
 single_service_single_instance_mock() ->
   [
-  {<<"service">>, <<"test">>},
+  {<<"service">>, <<"registry_test">>},
   {<<"version">>,<<"v1">>},
   {<<"instances">>,[
     [{<<"location">>,<<"1.1.1.1">>},
@@ -67,7 +67,7 @@ single_service_single_instance_mock() ->
 
 single_service_multiple_instance_mock() ->
  [
- {<<"service">>, <<"test">>},
+ {<<"service">>, <<"registry_test">>},
  {<<"version">>,<<"v2">>},
  {<<"instances">>,[
    [{<<"location">>,<<"1.1.1.1">>},
@@ -78,7 +78,7 @@ single_service_multiple_instance_mock() ->
 
 multiple_service_multiple_instance_mock() ->
  [[
-   {<<"service">>, <<"testall">>},
+   {<<"service">>, <<"registry_testall">>},
    {<<"version">>,<<"v1">>},
    {<<"instances">>,[
      [{<<"location">>,<<"1.1.1.1">>},
@@ -88,7 +88,7 @@ multiple_service_multiple_instance_mock() ->
     ]}
  ],
  [
-   {<<"service">>, <<"testall">>},
+   {<<"service">>, <<"registry_testall">>},
    {<<"version">>,<<"v2">>},
    {<<"instances">>,[
      [{<<"location">>,<<"1.1.1.1">>},

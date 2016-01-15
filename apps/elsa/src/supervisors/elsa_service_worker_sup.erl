@@ -3,7 +3,7 @@
 -behaviour(supervisor).
 
 -export([start_link/0,
-         start_child/1
+         start_child/2
         ]).
 
 -export([init/1
@@ -16,10 +16,10 @@ start_link() ->
   lager:info("Service worker supervisor started."),
   supervisor:start_link({local, ?SUPERVISOR}, ?SUPERVISOR, []).
 
-start_child(Service) ->
-  case supervisor:start_child(?SUPERVISOR, [Service]) of
+start_child(Service, Version) ->
+  case supervisor:start_child(?SUPERVISOR, [Service, Version]) of
     {ok, Pid} ->
-      lager:info("Service started: ~s", [Service]),
+      lager:info("Supervisor started service ~s version ~s", [Service, Version]),
       {ok, Pid};
     {error, {already_started, Pid}} -> {ok, Pid}
   end.

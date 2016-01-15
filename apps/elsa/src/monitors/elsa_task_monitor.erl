@@ -2,16 +2,15 @@
 -module(elsa_task_monitor).
 
 -export([start/6,
-         request/5
+         request/6
         ]).
 
-start(Method, Name, Version, Endpoint, Body, Timeout) ->
-  lager:info("Request method: ~s, service: ~s, version: ~s, endpoint: ~s created.", [Method, Name, Version, Endpoint]),
-  Service = concat(Version, Name),
-  timeout(Method, Service, Endpoint, Body, Timeout).
+start(Method, Service, Version, Endpoint, Body, Timeout) ->
+  lager:info("Request method: ~s, service: ~s, version: ~s, endpoint: ~s created.", [Method, Service, Version, Endpoint]),
+  timeout(Method, Service, Version, Endpoint, Body, Timeout).
 
-timeout(Method, Service, Endpoint, Body, Timeout) ->
-  Conn = spawn_link(?MODULE, request, [self(), Method, Service, Body, Endpoint]),
+timeout(Method, Service, Version, Endpoint, Body, Timeout) ->
+  Conn = spawn_link(?MODULE, request, [self(), Method, Service, Version, Body, Endpoint]),
   receive
     Msg -> Msg,
     {200, Msg}
@@ -22,21 +21,24 @@ timeout(Method, Service, Endpoint, Body, Timeout) ->
       [{<<"content-type">>, <<"application/json">>}],
       elsa_handler:to_json([
         {<<"status">>, 300},
+        {<<"service">>, Service},
+        {<<"version">>, Version},
         {<<"task_id">>, elsa_task:get_id(self())}
       ])
     }}
   end.
 
-request(Monitor, Method, Service, Body, Endpoint) ->
-  Instance = wait_for_instance(Service),
+request(Monitor, Method, Service, Version, Body, Endpoint) ->
+  Instance = wait_for_instance(Service, Version),
   URL = validate(concat(Instance, Endpoint)),
   Type = "application/json",
   DATA = request(Method, URL, Body, Type),
   receive
-    {timeout, PID} -> elsa_task:store_data(elsa_task:get_id(PID), DATA)
+    {timeout, PID} -> elsa_task:store_data(elsa_task:get_id(PID), DATA),
+    elsa_registry:checkin(Service, Version, Instance)
   after 0 ->
     Monitor ! DATA,
-    elsa_registry:checkin(Service, Instance)
+    elsa_registry:checkin(Service, Version, Instance)
   end.
 
 request(Method, URL, Body, Type) ->
@@ -48,11 +50,11 @@ request(Method, URL, Body, Type) ->
   end,
   {elsa_handler:headers_to_binary_headers(HEADERS), list_to_binary(DATA)}.
 
-wait_for_instance(Service) ->
-  case elsa_registry:checkout(Service) of
+wait_for_instance(Service, Version) ->
+  case elsa_registry:checkout(Service, Version) of
     unavailable ->
       timer:sleep(5000),
-      wait_for_instance(Service);
+      wait_for_instance(Service, Version);
     Instance ->
       Instance
   end.

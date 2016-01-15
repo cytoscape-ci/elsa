@@ -3,11 +3,13 @@
 
 -export([register/1,
          unregister/1,
-         checkout/1,
-         checkin/2]).
+         checkout/2,
+         checkin/3]).
 
--record(registration, {name, version, instances}).
+-record(registration, {service, version, instances}).
 -record(instance, {location, capacity}).
+
+%%Registration
 
 register([Service|_] = Registration) when is_list(Service) ->
   [register(S) || S <- Registration];
@@ -15,17 +17,14 @@ register([Service|_] = Registration) when is_list(Service) ->
 register(Registration) ->
   lager:info("Registering ~p", [Registration]),
   Reg = service(Registration),
-  Service = get_service_name(Reg#registration.version, Reg#registration.name),
-  case elsa_service_worker:find(Service) of
-    undefined ->
-      elsa_service_worker_sup:start_child(Service),
-      register_instances(Service, Reg#registration.instances);
-    _ ->
-      register_instances(Service, Reg#registration.instances)
-  end.
+  {Service, Version} = {Reg#registration.service, Reg#registration.version},
+  ensure_service(Service, Version),
+  register_instances(Service, Version, Reg#registration.instances).
 
-register_instances(Service, Instances) ->
-  [elsa_service_worker:register(Service, I#instance.location, I#instance.capacity) || I <- Instances].
+register_instances(Service, Version, Instances) ->
+  [elsa_service_worker:register(Service, Version, I#instance.location, I#instance.capacity) || I <- Instances].
+
+%%Unregistration
 
 unregister([Service|_] = Registration) when is_list(Service) ->
   [elsa_registry:unregister(S) || S <- Registration];
@@ -33,41 +32,30 @@ unregister([Service|_] = Registration) when is_list(Service) ->
 unregister(Registration) ->
   lager:info("Unregistering ~p", [Registration]),
   Reg = service(Registration),
-  Service = get_service_name(Reg#registration.version, Reg#registration.name),
-  case elsa_service_worker:find(Service) of
-    undefined ->
-      elsa_service_worker_sup:start_child(Service),
-      unregister_instances(Service, Reg#registration.instances);
-    _ ->
-      unregister_instances(Service, Reg#registration.instances)
-  end.
+  {Service, Version} = {Reg#registration.service, Reg#registration.version},
+  ensure_service(Service, Version),
+  unregister_instances(Service, Version,  Reg#registration.instances).
 
-unregister_instances(Service, Instances) ->
-  [elsa_service_worker:unregister(Service, I#instance.location) || I <- Instances].
+unregister_instances(Service, Version, Instances) ->
+  [elsa_service_worker:unregister(Service, Version, I#instance.location) || I <- Instances].
 
-checkout(Service) ->
-  lager:info("Checking out instance of service: ~s", [Service]),
-  case elsa_service_worker:find(Service) of
-    undefined ->
-      elsa_service_worker_sup:start_child(Service),
-      elsa_service_worker:checkout(Service);
-    _ ->
-      elsa_service_worker:checkout(Service)
-    end.
+%%Using Instances
 
-checkin(Service, Instance) ->
+checkout(Service, Version) ->
+  lager:info("Checking out instance of service: ~s version: ~s", [Service, Version]),
+  ensure_service(Service, Version),
+  elsa_service_worker:checkout(Service, Version).
+
+checkin(Service, Version, Instance) ->
   lager:info("Checking in instance of service: ~s", [Service]),
-  case elsa_service_worker:find(Service) of
-    undefined ->
-      elsa_service_worker_sup:start_child(Service),
-      elsa_service_worker:checkin(Service, Instance);
-    _ ->
-      elsa_service_worker:checkin(Service, Instance)
-    end.
+  ensure_service(Service, Version),
+  elsa_service_worker:checkin(Service, Version, Instance).
+
+%% Json registration to map
 
 service(Service) ->
   #registration{
-    name=proplists:get_value(<<"service">>, Service),
+    service=proplists:get_value(<<"service">>, Service),
     version=proplists:get_value(<<"version">>, Service),
     instances=[instance(I) || I <- proplists:get_value(<<"instances">>, Service)]
   }.
@@ -78,10 +66,15 @@ instance(Instance) ->
     capacity=capacity(proplists:get_value(<<"capacity">>, Instance))
   }.
 
-capacity(Capacity) when is_binary(Capacity) ->
-  infinity;
-capacity(Capacity) ->
-  Capacity.
+%% Utility
 
-get_service_name(Version, Name) ->
-  list_to_binary([Version, Name]).
+ensure_service(Service, Version) ->
+  Worker = elsa_service_worker:find(Service, Version),
+  case Worker of
+     undefined -> elsa_service_worker_sup:start_child(Service, Version);
+     Pid -> ok
+  end.
+
+capacity(<<"infinity">>) -> infinity;
+capacity(Capacity) when is_binary(Capacity) -> binary_to_integer(Capacity);
+capacity(Capacity) -> Capacity.
