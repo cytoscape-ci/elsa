@@ -1,62 +1,47 @@
 
 -module(elsa_task_monitor).
 
--export([start/6,
-         request/6
+-export([start/7,
+         request/7
         ]).
 
-start(Method, Service, Version, Endpoint, Body, Timeout) ->
+start(Method, Service, Version, Endpoint, Headers, Body, Timeout) ->
   lager:info("Request method: ~s, service: ~s, version: ~s, endpoint: ~s created.", [Method, Service, Version, Endpoint]),
-  timeout(Method, Service, Version, Endpoint, Body, Timeout).
-
-timeout(Method, Service, Version, Endpoint, Body, Timeout) ->
-  Conn = spawn_link(?MODULE, request, [self(), Method, Service, Version, Body, Endpoint]),
+  Conn = spawn_link(?MODULE, request, [self(), Method, Service, Version, Headers, Body, Endpoint]),
   receive
-    Msg -> Msg,
-    {200, Msg}
+    RESPONSE -> RESPONSE
   after Timeout ->
     elsa_task_worker_sup:start_child(self()),
     Conn ! {timeout, self()},
-    {300, {
-      [{<<"content-type">>, <<"application/json">>}],
-      elsa_handler:to_json([
-        {<<"status">>, 300},
-        {<<"service">>, Service},
-        {<<"version">>, Version},
-        {<<"task_id">>, elsa_task:get_id(self())}
-      ])
-    }}
+    elsa_handler:task(Service, Version, elsa_task:get_id(self()))
   end.
 
-request(Monitor, Method, Service, Version, Body, Endpoint) ->
-  Instance = wait_for_instance(Service, Version),
-  URL = validate(concat(Instance, Endpoint)),
-  Type = "application/json",
-  DATA = request(Method, URL, Body, Type),
+request(Monitor, Method, Service, Version, Headers, Body, Endpoint) ->
+  RESPONSE = call(Method, Service, Version, Headers, Body, Endpoint),
   receive
-    {timeout, PID} -> elsa_task:store_data(elsa_task:get_id(PID), DATA),
-    elsa_registry:checkin(Service, Version, Instance)
+    {timeout, PID} -> elsa_task:store_data(elsa_task:get_id(PID), RESPONSE)
   after 0 ->
-    Monitor ! DATA,
-    elsa_registry:checkin(Service, Version, Instance)
+    Monitor ! RESPONSE
   end.
 
-request(Method, URL, Body, Type) ->
-  {ok, {{_, _, _}, HEADERS, DATA}} = case Method of
-    get ->
-      httpc:request(Method, {URL, []}, [], []);
-    _ ->
-      httpc:request(Method, {URL, [], Type, Body}, [], [])
-  end,
-  {elsa_handler:headers_to_binary_headers(HEADERS), list_to_binary(DATA)}.
+call(Method, Service, Version, Headers, Body, Endpoint) ->
+  {URL, Instance} = wait_for_instance(Service, Version, Endpoint),
+  case elsa_http_client:call(Method, URL, Headers, Body) of
+    {ok, Status, RespHeaders, RespBody} ->
+      elsa_registry:checkin(Service, Version, Instance),
+      {Status, Headers, RespBody};
+    retry ->
+      elsa_registry:checkin(Service, Version, Instance),
+      call(Method, Service, Version, Headers, Body, Endpoint)
+  end.
 
-wait_for_instance(Service, Version) ->
+wait_for_instance(Service, Version, Endpoint) ->
   case elsa_registry:checkout(Service, Version) of
     unavailable ->
       timer:sleep(5000),
-      wait_for_instance(Service, Version);
+      wait_for_instance(Service, Version, Endpoint);
     Instance ->
-      Instance
+      {validate(concat(Instance, Endpoint)), Instance}
   end.
 
 concat(X, Y) ->
