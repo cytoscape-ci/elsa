@@ -19,7 +19,8 @@ register(Registration) ->
   Reg = service(Registration),
   {Service, Version} = {Reg#registration.service, Reg#registration.version},
   ensure_service(Service, Version),
-  register_instances(Service, Version, Reg#registration.instances).
+  register_instances(Service, Version, Reg#registration.instances),
+  elsa_agent_manager:service_registered(Registration).
 
 register_instances(Service, Version, Instances) ->
   [elsa_service_worker:register(Service, Version, I#instance.location, I#instance.capacity) || I <- Instances].
@@ -34,7 +35,8 @@ unregister(Registration) ->
   Reg = service(Registration),
   {Service, Version} = {Reg#registration.service, Reg#registration.version},
   ensure_service(Service, Version),
-  unregister_instances(Service, Version,  Reg#registration.instances).
+  unregister_instances(Service, Version,  Reg#registration.instances),
+  elsa_agent_manager:service_unregistered(Registration).
 
 unregister_instances(Service, Version, Instances) ->
   [elsa_service_worker:unregister(Service, Version, I#instance.location) || I <- Instances].
