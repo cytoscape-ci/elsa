@@ -20,7 +20,7 @@ remove_agent(Agent) ->
   gen_event:delete_handler({global, agent_manager}, elsa_agent_monitor, [Agent]).
 
 service_registered(Registration) ->
-  lager:info("Boadcasting service unregistered: ~p", [Registration]),
+  lager:info("Boadcasting service registered: ~p", [Registration]),
   gen_event:notify({global, agent_manager}, {service_registered, Registration}).
 
 service_unregistered(Registration) ->

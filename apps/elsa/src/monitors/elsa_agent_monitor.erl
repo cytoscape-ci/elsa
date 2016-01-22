@@ -10,13 +10,13 @@ lager:info("Agent ~s initialized", [Agent]),
 {ok, Agent}.
 
 handle_event({service_registered, Registration}, Agent) ->
-  lager:info("Agent handler ~s received registration broadcast", [Agent]),
+  lager:info("Agent handler ~s received register broadcast", [Agent]),
   update(<<"POST">>, Agent, Registration),
   lager:info("Agent ~s sent registration", [Agent]),
   {ok, Agent};
 
 handle_event({service_unregistered, Registration}, Agent) ->
-  lager:info("Agent handler ~s received registration broadcast", [Agent]),
+  lager:info("Agent handler ~s received unregister broadcast", [Agent]),
   update(<<"DELETE">>, Agent, Registration),
   lager:info("Agent ~s sent unregistration", [Agent]),
   {ok, Agent}.
