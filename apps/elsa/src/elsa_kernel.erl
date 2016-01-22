@@ -1,5 +1,5 @@
 
--module(elsa_service_handler).
+-module(elsa_kernel).
 
 -export([init/3,
          handle/2,
@@ -17,7 +17,7 @@ handle(Req, State) ->
   {Timeout, Req4} = cowboy_req:header(<<"x-elsa-timeout">>, Req3, <<"5000">>),
   {Headers, Req5} = cowboy_req:headers(Req4),
   {Method, Req6} = cowboy_req:method(Req5),
-  {ok, Body, Request} = cowboy_req:body(Req6),
+  {ok, Body, Request} = cowboy_req:body(Req6, [{length, infinity}]),
   {Status, RespHeaders, Response} = elsa_task_monitor:start(Method,
                                                           Service,
                                                           Version,

@@ -16,6 +16,6 @@ dispatch() ->
         {Host, [
           {"/task/:id", elsa_task_handler, []},
           {"/registration/[...]", elsa_registration_handler, []},
-          {"/:service/:version/[...]", elsa_service_handler, []}
+          {"/:service/:version/[...]", elsa_kernel, []}
         ]}
     ]).
