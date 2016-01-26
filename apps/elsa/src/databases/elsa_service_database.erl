@@ -2,6 +2,8 @@
 -module(elsa_service_database).
 
 -export([
+         list_all_services/0,
+         list_all_versions/1,
          load_service/2,
          store_instance/4,
          remove_instance/3,
@@ -11,6 +13,16 @@
 -include_lib("stdlib/include/qlc.hrl").
 
 -record(service_instance, {location, capacity, out}).
+
+list_all_services() ->
+  [format_service(T) || T <- get_all_services()].
+
+list_all_versions(Service) ->
+  [format_version(T) || T <- get_all_services(), is_service(T, Service)].
+
+get_all_services() ->
+  [T || T <- mnesia:system_info(tables), is_service_table(T)].
+
 
 load_service(Service, Version) ->
   Table = table_id(Service, Version),
@@ -88,4 +100,35 @@ remove(ID, Instance) when is_atom(ID) ->
   }, write, write),
   Instance#service_instance.location.
 
-table_id(Service, Version) -> binary_to_atom(<< Service/binary, <<"_">>/binary, Version/binary >>, utf8).
+table_id(Service, Version) -> binary_to_atom(<<<<"elsa_service__">>/binary, Service/binary, <<"_">>/binary, Version/binary >>, utf8).
+
+is_service_table(Table) ->
+  URL = atom_to_list(Table),
+  case string:sub_string(URL, 1, 14) of
+    "elsa_service__" -> true;
+    _ -> false
+  end.
+
+is_service(Table, Service) ->
+  [_, _, Serv, _] = string:tokens(atom_to_list(Table), "_"),
+  case binary_to_list(Service) of
+    Serv -> true;
+    _ -> false
+  end.
+
+format_service(Table) ->
+  Size = mnesia:table_info(Table, size),
+  [_, _, Service, Version] = string:tokens(atom_to_list(Table), "_"),
+  [
+    {<<"Service">>, list_to_binary(Service)},
+    {<<"Version">>, list_to_binary(Version)},
+    {<<"Instances">>, integer_to_binary(Size)}
+  ].
+
+format_version(Table) ->
+  Size = mnesia:table_info(Table, size),
+  [_, _, _, Version] = string:tokens(atom_to_list(Table), "_"),
+  [
+    {<<"Version">>, list_to_binary(Version)},
+    {<<"Instances">>, integer_to_binary(Size)}
+  ].

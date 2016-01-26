@@ -4,7 +4,8 @@
 -export([status/1,
          store_data/2,
          data/1,
-         get_id/1
+         get_id/1,
+         remove/1
          ]).
 
 status(ID) ->
@@ -31,3 +32,6 @@ data(ID) ->
 
 get_id(Task) when is_pid(Task) ->
   base16:encode(crypto:hash(sha256, pid_to_list(Task))).
+
+remove(ID) ->
+  lager:info("Request to remove task").

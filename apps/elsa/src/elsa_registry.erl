@@ -4,7 +4,10 @@
 -export([register/1,
          unregister/1,
          checkout/2,
-         checkin/3]).
+         checkin/3,
+         list/0,
+         list/1,
+         service_exists/1]).
 
 -record(registration, {service, version, instances}).
 -record(instance, {location, capacity}).
@@ -40,6 +43,20 @@ unregister(Registration) ->
 
 unregister_instances(Service, Version, Instances) ->
   [elsa_service_worker:unregister(Service, Version, I#instance.location) || I <- Instances].
+
+%%info
+
+list() ->
+  elsa_service_database:list_all_services().
+
+list(Service) when is_binary(Service) ->
+  elsa_service_database:list_all_versions(Service).
+
+service_exists(Service) ->
+  case length(list(Service)) of
+    0 -> false;
+    _ -> true
+  end.
 
 %%Using Instances
 
