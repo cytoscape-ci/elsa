@@ -1,37 +1,42 @@
 
 -module(elsa_task).
 
--export([status/1,
-         store_data/2,
-         data/1,
-         get_id/1,
-         remove/1
+-export([new/5,
+         status/1,
+         store/4,
+         store/2,
+         retreive/1,
+         delete/1,
+         all/0
          ]).
+
+new(PID, Service, Version, Method, Endpoint) when is_pid(PID) ->
+  ID = base16:encode(crypto:hash(sha256, pid_to_list(PID))),
+  case elsa_task_database:info(ID) of
+    not_found ->
+      elsa_task_database:create(ID, Service, Version, Method, Endpoint),
+      ID;
+    _ -> already_exists
+  end.
 
 status(ID) ->
   lager:info("Checking status of task: ~s", [ID]),
-  case elsa_task_worker:find(ID) of
-    undefined ->
-      not_found;
-    _ ->
-      check_data(elsa_task_worker:get_data(ID))
+  elsa_task_database:info(ID).
+
+store(ID, Status, Headers, Response) ->
+  store(ID, {Status, Headers, Response}).
+
+store(ID, {S, H, R}) ->
+  elsa_task_database:store(ID, {S, H, R}).
+
+retreive(ID) ->
+  case elsa_task_database:retreive(ID) of
+    {task, ID, _Completed, _, _, _, _, _, S, H, R} -> {S, H, R};
+    not_found -> not_found
   end.
 
-check_data(incomplete) ->
-  incomplete;
-check_data(_Data) ->
-  complete.
+delete(ID) ->
+  elsa_task_database:delete(ID).
 
-store_data(ID, Data) ->
-  lager:info("Storing data for task: ~s", [ID]),
-  elsa_task_worker:store_data(ID, Data).
-
-data(ID) ->
-  lager:info("Retreiving data for task: ~s", [ID]),
-  elsa_task_worker:get_data(ID).
-
-get_id(Task) when is_pid(Task) ->
-  base16:encode(crypto:hash(sha256, pid_to_list(Task))).
-
-remove(ID) ->
-  lager:info("Request to remove task").
+all() ->
+  elsa_task_database:all().

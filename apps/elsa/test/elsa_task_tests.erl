@@ -3,34 +3,63 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-elsa_service_worker_test_() ->
-  {"Test service worker API.",
-   { foreach
-   , fun setup/0
-   , fun cleanup/1
-   , [fun test_status_without_task/1,
-      fun test_status_with_task/1,
-      fun test_status_with_task_and_data/1
-     ]}}.
+elsa_task_database_test_() ->
+  {"Test task API.",
+   {inorder,
+     {foreach
+       , fun setup/0
+       , fun cleanup/1
+       , [fun test_create_new_task/1,
+          fun test_task_already_exists/1,
+          fun test_store_response_in_task/1,
+          fun test_remove_task/1,
+          fun test_status_complete/1,
+          fun test_status_incomplete/1
+         ]
+     }
+   }
+  }.
 
 setup() ->
   {ok, _Started} = application:ensure_all_started(elsa),
+  elsa_task_database:load(),
+  mnesia:wait_for_tables([elsa_tasks], 3000),
+  elsa_task_database:clear(),
   ok.
 
-cleanup(Worker)->
+cleanup(_Setup)->
+  elsa_task_database:clear(),
   ok.
 
-test_status_without_task(_Setup) ->
-  Not_found = elsa_task:status(<<"FAKETASK">>),
-  [?_assertEqual(not_found, Not_found)].
+test_create_new_task(_Setup) ->
+  [?_assertNotEqual(elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>), already_exists)].
 
-test_status_with_task(_Setup) ->
-  elsa_task_worker:start_link(self()),
-  Incomplete = elsa_task:status(elsa_task:get_id(self())),
-  [?_assertEqual(incomplete, Incomplete)].
+test_task_already_exists(_Setup) ->
+  elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  Exists = elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  [?_assertEqual(Exists, already_exists)].
 
-test_status_with_task_and_data(_Setup) ->
-  elsa_task_worker:start_link(self()),
-  elsa_task:store_data(elsa_task:get_id(self()), data),
-  Complete = elsa_task:status(elsa_task:get_id(self())),
-  [?_assertEqual(complete, Complete)].
+test_store_response_in_task(_Setup) ->
+  ID = elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  Data = {<<"400">>, [<<"content-type">>,<<"test">>], <<"body">>},
+  elsa_task:store(ID, Data),
+  Data2 = elsa_task:retreive(ID),
+  [?_assertEqual(Data, Data2)].
+
+test_remove_task(_Setup) ->
+  ID = elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  elsa_task:delete(ID),
+  Exists = elsa_task:status(ID),
+  [?_assertEqual(not_found, Exists)].
+
+test_status_complete(_Setup) ->
+  ID = elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  Data = {<<"400">>, [<<"content-type">>,<<"test">>], <<"body">>},
+  elsa_task:store(ID, Data),
+  {completed, Completed} = elsa_task:status(ID),
+  [?_assertEqual(true, Completed)].
+
+test_status_incomplete(_Setup) ->
+  ID = elsa_task:new(self(),<<"test">>,<<"v1">>,<<"GET">>,<<"/">>),
+  {completed, Completed} = elsa_task:status(ID),
+  [?_assertEqual(false, Completed)].

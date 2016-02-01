@@ -21,7 +21,6 @@ init([]) ->
     strategy => one_for_one
   },
   Supervisors = [
-    ?CHILD(elsa_service_worker_sup, permanent, supervisor),
-    ?CHILD(elsa_task_worker_sup, permanent, supervisor)
+    ?CHILD(elsa_service_worker_sup, permanent, supervisor)
   ],
   {ok, {Sup_flags, Supervisors}}.

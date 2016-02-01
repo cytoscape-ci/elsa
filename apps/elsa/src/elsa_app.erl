@@ -28,7 +28,11 @@ database_setup(Nodes) ->
   end,
   mnesia:start(),
   rpc:multicall(Nodes, application, start, [mnesia]),
-  lager:info("Mnesia started.").
+  lager:info("Mnesia started."),
+  elsa_task_database:load(),
+  lager:info("Task database started."),
+  elsa_service_database:load(),
+  lager:info("Service database started.").
 
 database_teardown(Nodes) ->
   rpc:multicall(Nodes, application, stop, [mnesia]),

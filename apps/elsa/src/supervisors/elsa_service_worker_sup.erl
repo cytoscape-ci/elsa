@@ -13,8 +13,10 @@
 -define(CHILD, elsa_service_worker).
 
 start_link() ->
+  S = supervisor:start_link({local, ?SUPERVISOR}, ?SUPERVISOR, []),
   lager:info("Service worker supervisor started."),
-  supervisor:start_link({local, ?SUPERVISOR}, ?SUPERVISOR, []).
+  elsa_service_database:load(),
+  S.
 
 start_child(Service, Version) ->
   case supervisor:start_child(?SUPERVISOR, [Service, Version]) of
