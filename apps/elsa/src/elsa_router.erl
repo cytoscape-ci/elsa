@@ -5,7 +5,7 @@
          ]).
 
 start() ->
-    {ok, _} = cowboy:start_http(elsa_server, 100, [{port, 80}],
+    {ok, _} = cowboy:start_http(elsa_server, 100, [{port, 8080}],
         [{env, [{dispatch, dispatch('_')}]}]
     ).
 
